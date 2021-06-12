@@ -1,3 +1,14 @@
+/**************************************************************************
+ * 
+ *                     Utility Functions.
+ * 
+ **************************************************************************/
+
+/**
+ * 
+ * @param {string} jsonString Testing whether the string is a valid object or not
+ * @returns Returns the json string if valid object, returns false if not.
+ */
 function tryParseJSON_(jsonString) {
   try {
     var o = JSON.parse(jsonString);
@@ -9,6 +20,12 @@ function tryParseJSON_(jsonString) {
   return false;
 };
 
+/**
+ * 
+ * @param {string} queryString The query string made to 3Commas. This is everythign "/public/api" and on. 
+ * @param {*} apisecret The 3Commas' API Secret key.
+ * @returns Returns a 256 SHA of the query + api secret
+ */
 function get3cSignature_(queryString, apisecret) {
   return Utilities.computeHmacSha256Signature(queryString, apisecret)
     .map(e => { return ("0" + (e < 0 ? e + 256 : e).toString(16)).slice(-2) })
@@ -19,11 +36,21 @@ function get3cSignature_(queryString, apisecret) {
 /**
  * @param {string} url This is the full URL we want to request from the API.
  * @param {string} method GET/POST/PATCH
- * @description The base fetch call that returns the parsed information.
  */
-async function fetchCall_(url, method, apikey, signature, payload) {
 
-  //enable this console log if you're troubleshooting.
+/**
+ * @description The base fetch call that returns the parsed information.
+ * 
+ * @param {string} url The fetch call URL
+ * @param {string} method GET/POST/PATCH
+ * @param {apikey} apikey the 3Commas' api key
+ * @param {string} signature Calculated signature value from query string + secret
+ * @param {object} payload (OPTIONAL) - the payload for post / patch calls.
+ * @returns {object} {data, status, headers}
+ */
+async function fetchCall_(url, method, apikey, signature, payload = null) {
+
+  //enable this console log if you're troubleshooting. You can use this for curl / postman calls.
   //console.log(apikey, signature, url)
 
   let options = {
@@ -99,9 +126,6 @@ async function query3cRateLimiter_(url, method, apikey, signature, timeout = 0, 
       resolve({ 'data': [] })
     }
   })
-
-
-
 }
 
 /**
@@ -159,7 +183,7 @@ async function query3cLoop_(method, endpoint, params = '', apiKeys) {
  * 
  * @return {object} - If calling with loop = true it returns your array of data, nothing else. If loop = false it returns "{ data, status, headers }" 
  */
-async function API(method, endpoint, apiKeys, params = '', loop, payload, limit = '') {
+async function API_(apiKeys, method, endpoint, params = '', loop, payload, limit = '') {
   let { apikey, apisecret } = apiKeys
   if (!method || !endpoint) {
     throw new Error("Missing the method or endpoint.")
@@ -195,6 +219,45 @@ async function API(method, endpoint, apiKeys, params = '', loop, payload, limit 
     }
   }
   return apiCall
+}
+
+/**************************************************************************
+ * 
+ *                     API Endpoint Calls.
+ * 
+ **************************************************************************/
+
+
+/**
+ * @description GET call to the 3Commas' API.
+ * 
+ * @param {object} apiKeys - REQUIRED - This is an object structured like "{api_key: 'yourKey', 'api_secret': 'yourSecret'}""
+ * @param {string} endpoint - REQUIRED -  The url endpoint from 3C. Do NOT include the '/public/api/' into this. It should be '/ver1/bots' for example.
+ * @param {string} params - If additional params are needed to be passed in, do not include the offset or limit. These are structured like "&param=value"
+ * @param {boolean} loop - This controls if you want more than 25 results returned. It'll loop through and provide all the data at that endpoint.
+ * @param {object} limit - If you want to limit the results to a specific number instead of the entire data set.
+ * 
+ * @return {object} - If calling with loop = true it returns your array of data, nothing else. If loop = false it returns "{ data, status, headers, error }" 
+ */
+async function GET(apiKeys, endpoint, params = '', loop = false, limit = ''){
+  payload = null
+  method = "GET"
+  return await API_(apiKeys, method, endpoint, params = '', loop, payload, limit = '') 
+}
+
+/**
+ * @description GET call to the 3Commas' API.
+ * 
+ * @param {object} apiKeys - REQUIRED - This is an object structured like "{api_key: 'yourKey', 'api_secret': 'yourSecret'}""
+ * @param {string} endpoint - REQUIRED -  The url endpoint from 3C. Do NOT include the '/public/api/' into this. It should be '/ver1/bots' for example.
+ * @param {string} params - If additional params are needed to be passed in, do not include the offset or limit. These are structured like "&param=value"
+ * @param {string} payload - (NOT REQUIRED) - 3Commas' has multiple post endpoints that do not require a payload. When using this make sure to pass in an object.
+ * 
+ * @return {object} - If calling with loop = true it returns your array of data, nothing else. If loop = false it returns "{ data, status, headers, error }" 
+ */
+async function POST(apiKeys, endpoint, params = '', payload){
+  let loop, limit = null;
+  return await API_(apiKeys, method, endpoint, params = '', loop, payload, limit = '') 
 }
 
 
