@@ -145,7 +145,7 @@ async function query3cRateLimiter_(url, method, apikey, signature, timeout = 0, 
    * @param {string} endpoint - The url endpoint from 3C. Do NOT include the '/public/api/' into this. It should be '/ver1/bots' for example.
    * @param {string} params - If additional params are needed to be passed in, do not include the offset or limit.
    */
-async function query3cLoop_(method, endpoint, params = '', apiKeys) {
+async function query3cLoop_(method, endpoint, params = '', apiKeys, limit) {
 
   let { apikey, apisecret } = apiKeys
 
@@ -233,7 +233,8 @@ async function API_(apiKeys, method, endpoint, params = '', loop, payload, limit
     }
   } else if (method === "POST") {
     try {
-      signature = get3cSignature_(queryString + payload, apisecret)
+      let body = (payload) ? queryString + payload : queryString
+      signature = get3cSignature_(body, apisecret)
       apiCall = await fetchCall_(url, method, apikey, signature, payload);
       console.log('POSTED to single URL- ' + url)
     } catch (error) {
@@ -241,7 +242,8 @@ async function API_(apiKeys, method, endpoint, params = '', loop, payload, limit
     }
   } else if (method === "PATCH") {
     try {
-      signature = get3cSignature_(queryString + payload, apisecret)
+      let body = (payload) ? queryString + payload : queryString
+      signature = get3cSignature_(body, apisecret)
       apiCall = await fetchCall_(url, method, apikey, signature, payload);
       console.log('PATCHED to single URL- ' + url)
     } catch (error) {
@@ -281,7 +283,7 @@ async function API_(apiKeys, method, endpoint, params = '', loop, payload, limit
 async function GET(apiKeys, endpoint, params = '', loop = false, limit = '') {
   payload = null
   method = "GET"
-  return await API_(apiKeys, method, endpoint, params = '', loop, payload, limit = '')
+  return await API_(apiKeys, method, endpoint, params, loop, payload, limit)
 }
 
 /**
