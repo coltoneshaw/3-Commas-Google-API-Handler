@@ -6,9 +6,19 @@ You can view the public library [on Google App Script here](https://script.googl
 
 You can choose to either add this as a library to your Google App Script project, or copy the code directly into your project. There are potential speed implications by choosing a library. However, in testing we have not noticed a significant impact by going with a library.
 
+For more details on interacting with the 3Commas API you can use their [GitHub Documentation here](https://github.com/3commas-io/3commas-official-api-docs).
+
 # Privacy
 
 Privacy is important with your 3Commas' API information. When using this code as a library it's executed locally to your Google App Script environment and your data is never shared outside of your Google Script.
+
+# Tips on using this library
+
+- Google sets default quotas on each Google Acount. This means you have a potential 5 minute execution time. Some data calls to 3Commas can become quite large. You may need to break these calls into multiple functions that get triggered. You can use Google's [documentation on Quotas](https://developers.google.com/apps-script/guides/services/quotas) for more info.
+- Basic error handling is implemented within the Library, however, the goal is to pass the response from the API back. Be sure to implement basic error handling on the responses.
+- Limit larger calls to by using date or limit params.
+- For `POST`, `PUT`, and `DELETE` endpoints, the parameters may be sent as a `param` string or within the payload. You may mix parameters between both the `param` string and or `payload` if you wish to do so. If a parameter sent in both the `param` string and the `payload`, the `param` string parameter will be used.
+
 
 # Adding the Library
 
@@ -104,11 +114,17 @@ async function test_get_call(){
 
 ## POST
 
-The `POST` endpoint supports posts that only are for data or actually pushing data to 3Commas. The structure is similar to the GET calls.
+The `POST` method supports updating and pushing new data into 3Commas based on the endpoints you are using. The structure is similar to the GET calls. Note that you can send parameters within the params or the payload.
+
+The `POST` and `PATCH` endpoints do not supprt JSON in the payload. The payload is simply what you'd pass to the params.
+
+A successful `POST` response will be a 201 status code.
 
 ### POST API example
 
 This example implements some basic filtering using data that is returned from the library.
+
+
 
 ```javascript
 async function example_post_call() {
@@ -128,11 +144,93 @@ async function example_post_call() {
 
 ```
 
-## API Call Response
+## PATCH
+
+The `PATCH` method should be used when updating existing information already within 3Commas. This method updates the specific fields passed and returns the data object that you updated. Note that you can send parameters within the params or the payload.
+
+**The `POST` and `PATCH` endpoints do not supprt JSON in the payload. The payload is simply what you'd pass to the params.**
+
+### Patch API Example
+
+In the below example we are using both a parameter within the params url string and in the payload of the `PATCH` request. This will use both parameters to update the deal. For more details on this reference the Tips to Using this Library above.
+
+A successful `PATCH` response will be a 200 status code.
+
+**Function Example**
+```javascript
+async function patch_test_call(){
+  let endpoint = "/ver1/deals/569900008/update_deal"
+  let params = "&max_safety_orders=30"
+  let payload = "take_profit=1"
+  let apiKeys = api_keys_3c()
+
+  let deals = await api_3c.PATCH(apiKeys, endpoint, params, payload)
+  if(deals.status === 200){
+    return deals.data
+  }
+}
+```
+
+**Example Response**
+
+```javascript
+{ data:  
+  { id: 569900008,
+     type: 'Deal',
+     ...
+     max_safety_orders: 30,
+     deal_has_error: false,
+     from_currency_id: 0,
+     ...
+     take_profit: '1',
+     ...
+     strategy: 'long',
+     bot_events: 
+      [ ... ] },
+  status: 200,
+  headers: 
+   {}
+```
+
+## DELETE
+
+The delete method is not widely supported with 3Commas and the 3Commas documentation mixes a traditional `DELETE` request with a `POST` request to a `/delete` endpoint. Be sure you're intending to use the method `DELETE`.
+
+Note that when you first delete an item you'll be returned a `true` value in the data object. Any future `DELETE` attempts at that item will continue to return `true`.
+
+**Function Example**
+
+In the `DELETE` example below we make a simple delete to the `/grid_bots` endpoint and delete a grid bot. The 3C API returns a simple true / false if the delete was successful and a `404` error if the delete was unsuccessful in finding the data.
+
+```javascript
+async function test_delete_call(){
+  let endpoint = "/ver1/grid_bots/{id}"
+  let apiKeys = api_keys_3c()
+
+  let deals = await api_3c.DELETE(apiKeys, endpoint)
+  if(deals.status === 200 || deals.data == true){
+    return true
+  }
+}
+```
+
+**Example Delete Response**
+
+```javascript
+{ 
+  data: 'true',
+  status: 200,
+  headers: 
+   {}
+}
+```
+
+
+# API Call Responses
 
 The response object will contain a data array, status, headers, and a potential error object. If the data response is successful this data array will be a parsed JSON object.
 
-###  GET non-looped and POST
+###  `GET` non-looped / `POST` / `PATCH`
 
 Note here that a looped GET response will look different.
 
@@ -162,12 +260,11 @@ A failed response will contain an additional error key to parse the message on. 
   error: 'Invalid JSON object was returned. Check to make sure your endpoint is correct.' }
 ```
 
-###  GET Looped Response
+###  `GET` Looped Response
 
 A `GET` looped response will include the data object containing all the data from the looped response. No other values are added for a successful call.
 
-#### Sucessful response example:
-
+**Sucessful response example:**
 ```javascript
 {
   'data' : [
@@ -177,7 +274,7 @@ A `GET` looped response will include the data object containing all the data fro
 }
 ```
 
-#### Failed response example:
+**Failed response example:**
 
 A failed `GET` looped call will contain an error message detailing the issue. Usually for a loop you should also check the logs as additional call logging happens for each loop.
 
@@ -190,9 +287,3 @@ A failed `GET` looped call will contain an error message detailing the issue. Us
   'error' : 'error message here'
 }
 ```
-
-# Tips on using this library
-
-1. Google sets default quotas on each Google Acount. This means you have a potential 5 minute execution time. Some data calls to 3Commas can become quite large. You may need to break these calls into multiple functions that get triggered. You can use Google's [documentation on Quotas](https://developers.google.com/apps-script/guides/services/quotas) for more info.
-2. Basic error handling is implemented within the Library, however, the goal is to pass the response from the API back. Be sure to implement basic error handling on the responses.
-3. Limit larger calls to by using date or limit params.
