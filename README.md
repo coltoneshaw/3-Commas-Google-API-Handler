@@ -287,3 +287,13 @@ A failed `GET` looped call will contain an error message detailing the issue. Us
   'error' : 'error message here'
 }
 ```
+
+# Changelog
+
+## v0.0.2
+- Added `DELETE` / `PATCH` as supported calls
+- Improved error handling
+- BUG: limit was not a recognized value for a `GET` loop.
+
+## v0.0.1
+- Inital Release
